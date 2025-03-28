@@ -210,7 +210,10 @@ namespace DnfRepeater.Modules
                 _repeatTimer.Dispose();
                 UnhookWinEvent(_winEventHook);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during Dispose.");
+            }
         }
         #endregion
 
@@ -346,10 +349,65 @@ namespace DnfRepeater.Modules
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool IsWindow(IntPtr hWnd);
 
-        private const uint WM_KEYDOWN = 0x0100;
-        private const uint WM_KEYUP = 0x0101;
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint MapVirtualKey(uint uCode, uint uMapType);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint type;
+            public InputUnion u;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)]
+            public MOUSEINPUT mi;
+            [FieldOffset(0)]
+            public KEYBDINPUT ki;
+            [FieldOffset(0)]
+            public HARDWAREINPUT hi;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct HARDWAREINPUT
+        {
+            public uint uMsg;
+            public ushort wParamL;
+            public ushort wParamH;
+        }
+
         private const uint EVENT_SYSTEM_FOREGROUND = 0x0003;
         private const uint WINEVENT_OUTOFCONTEXT = 0;
+        private const uint MAPVK_VK_TO_VSC = 0;
+        private const uint KEYEVENTF_SCANCODE = 0x0008;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+        private const uint INPUT_KEYBOARD = 1;
 
         private string GetWindowTitle(IntPtr hWnd)
         {
@@ -364,10 +422,23 @@ namespace DnfRepeater.Modules
 
         private void SendKey(IntPtr hWnd, int vk)
         {
-            PostMessage(hWnd, WM_KEYDOWN, (IntPtr)vk, IntPtr.Zero);
-            // 延时10毫秒，确保目标窗口有足够的时间处理按键按下和释放事件，从而避免可能的按键丢失或未正确处理的情况。
-            Thread.Sleep(10);
-            PostMessage(hWnd, WM_KEYUP, (IntPtr)vk, IntPtr.Zero);
+            ushort scanCode = (ushort)MapVirtualKey((uint)vk, MAPVK_VK_TO_VSC);
+
+            INPUT[] inputs = new INPUT[2];
+
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].u.ki.wVk = (ushort)vk;
+            inputs[0].u.ki.wScan = scanCode;
+            inputs[0].u.ki.dwFlags = KEYEVENTF_SCANCODE; // Key down
+
+            inputs[1].type = INPUT_KEYBOARD;
+            inputs[1].u.ki.wVk = (ushort)vk;
+            inputs[1].u.ki.wScan = scanCode;
+            inputs[1].u.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Key up
+
+            SendInput(1, new INPUT[] { inputs[0] }, Marshal.SizeOf(typeof(INPUT)));
+            Thread.Sleep(10); // 间隔10毫秒
+            SendInput(1, new INPUT[] { inputs[1] }, Marshal.SizeOf(typeof(INPUT)));
         }
 
         private bool IsWindowClosed(IntPtr hWnd)
