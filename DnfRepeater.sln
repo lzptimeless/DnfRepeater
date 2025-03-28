@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35913.81
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DnfRepeater", "DnfRepeater\DnfRepeater.csproj", "{3659B2BF-6696-43EF-90F1-D13E6AAA22A1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestDemo", "TestDemo\TestDemo.csproj", "{3BDA9CF7-3C49-4114-AEBD-047A6AD63071}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3659B2BF-6696-43EF-90F1-D13E6AAA22A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3659B2BF-6696-43EF-90F1-D13E6AAA22A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3659B2BF-6696-43EF-90F1-D13E6AAA22A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3659B2BF-6696-43EF-90F1-D13E6AAA22A1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BDA9CF7-3C49-4114-AEBD-047A6AD63071}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BDA9CF7-3C49-4114-AEBD-047A6AD63071}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BDA9CF7-3C49-4114-AEBD-047A6AD63071}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BDA9CF7-3C49-4114-AEBD-047A6AD63071}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C4B117FA-C6FB-490F-96A7-5C5CC9D8356B}
+	EndGlobalSection
+EndGlobal
