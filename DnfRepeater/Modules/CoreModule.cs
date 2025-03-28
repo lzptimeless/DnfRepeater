@@ -35,7 +35,7 @@ namespace DnfRepeater.Modules
 
         #region properties
         /// <summary>
-        /// 启用|关闭快捷键，格式：Ctrl+Shift+Alt+Key
+        /// 开关快捷键，格式：Ctrl+Shift+Alt+Key
         /// </summary>
         public string? OnOffHotkey { get; private set; }
         /// <summary>
@@ -43,7 +43,7 @@ namespace DnfRepeater.Modules
         /// </summary>
         public string? RepeatKey { get; private set; }
         /// <summary>
-        /// 连发键频率（次/秒），取值范围：<see cref="UserConfig.RepeatFrequencyMin"/>-<see cref="UserConfig.RepeatFrequencyMax"/>
+        /// 连发频率（次/秒），取值范围：<see cref="UserConfig.RepeatFrequencyMin"/>-<see cref="UserConfig.RepeatFrequencyMax"/>
         /// </summary>
         public int RepeatFrequency { get; private set; }
         /// <summary>
