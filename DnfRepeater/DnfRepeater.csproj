@@ -6,7 +6,19 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>RepeaterIcon.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Images\RepeaterIcon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Images\RepeaterIcon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="RepeaterIcon.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />

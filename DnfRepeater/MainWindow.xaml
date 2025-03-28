@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DnfRepeater"
         mc:Ignorable="d"
-        Title="MainWindow" Height="370" Width="340" 
+        Title="DNF连发器" Height="370" Width="340" 
+        Icon="/Images/RepeaterIcon.png"
         ResizeMode="CanMinimize"
         MouseDown="Window_MouseDown">
     <Grid>
