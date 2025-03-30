@@ -14,7 +14,6 @@ namespace DnfRepeater.Modules
     {
         #region fields
         private readonly UserConfig _userConfig;
-        private readonly Timer _repeatTimer;
         private IntPtr _targetHWnd;
         private int _repeatVk;
         private int _registeredOnOffHotkeyId;
@@ -23,14 +22,19 @@ namespace DnfRepeater.Modules
         /// </summary>
         private WinEventDelegate _winEventDelegate;
         private IntPtr _winEventHook;
+        private readonly ManualResetEvent _repeatEvent;
+        private readonly Thread _repeatThread;
+        private bool _isDisposed;
         #endregion
 
         public CoreModule()
         {
-            _repeatTimer = new Timer(OnRepeatTimerCallback);
             _userConfig = UserConfig.Load();
             _winEventDelegate = new WinEventDelegate(WinEventProc);
             _winEventHook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, IntPtr.Zero, _winEventDelegate, 0, 0, WINEVENT_OUTOFCONTEXT);
+            _repeatEvent = new ManualResetEvent(false);
+            _repeatThread = new Thread(RepeatThreadProcess);
+            _repeatThread.Start();
         }
 
         #region properties
@@ -187,28 +191,23 @@ namespace DnfRepeater.Modules
             }
 
             RepeatFrequency = frequency;
-            if (IsOn)
-            {
-                var currentForegroundHWnd = GetForegroundWindow();
-                if (currentForegroundHWnd == _targetHWnd)
-                {
-                    // 如果正在监听目标窗口，则重新设置Timer
-                    Log.Information("Resetting repeat timer because repeat frequency is changed.");
-                    StartRepeat();
-                }
-            }
             _userConfig.RepeatFrequency = RepeatFrequency;
             _userConfig.Save();
         }
 
         public void Dispose()
         {
+            if (_isDisposed) return;
+
+            _isDisposed = true;
             try
             {
                 HotkeyManager.Default.UnregisterAll();
                 StopRepeat();
-                _repeatTimer.Dispose();
                 UnhookWinEvent(_winEventHook);
+                _repeatEvent.Set();
+                _repeatThread.Join(1000);
+                _repeatEvent.Dispose();
             }
             catch (Exception ex)
             {
@@ -241,8 +240,8 @@ namespace DnfRepeater.Modules
                     }
                     else
                     {
-                        // 当前台窗口是_targetHWnd时，重新设置Timer
-                        Log.Information("Resetting repeat timer because the foreground window is restored.");
+                        // 当前台窗口变为_targetHWnd时开始连发
+                        Log.Information("Starting repeat because the foreground window is changed to the target window.");
                         StartRepeat();
                     }
                 }
@@ -286,41 +285,63 @@ namespace DnfRepeater.Modules
         /// </summary>
         private void StartRepeat()
         {
-            StopRepeat();
-
-            var frequency = RepeatFrequency;
-            if (frequency < UserConfig.RepeatFrequencyMin || frequency > UserConfig.RepeatFrequencyMax) return;
-
-            var interval = 1000 / frequency;
-            _repeatTimer.Change(interval, interval);
+            _repeatEvent.Set();
         }
 
         private void StopRepeat()
         {
-            _repeatTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _repeatEvent.Reset();
         }
 
-        private void OnRepeatTimerCallback(object? state)
+        private void RepeatThreadProcess(object? state)
         {
-            var newIsRepeating = false;
-            if (_targetHWnd != IntPtr.Zero && _repeatVk != 0)
+            while (true)
             {
-                var currentForegroundHWnd = GetForegroundWindow();
-                if (currentForegroundHWnd == _targetHWnd)
+                _repeatEvent.WaitOne();
+                // 计算连发延迟
+                var frequency = Math.Max(UserConfig.RepeatFrequencyMin, Math.Min(UserConfig.RepeatFrequencyMax, RepeatFrequency));
+                var delay = 1000 / frequency;
+                // 检测当前是否需要连发
+                var currentIsRepeating = false;
+                if (_targetHWnd != IntPtr.Zero && _repeatVk != 0)
                 {
-                    var vkState = GetAsyncKeyState(_repeatVk);
-                    if ((vkState & 0x8000) != 0)
+                    var currentForegroundHWnd = GetForegroundWindow();
+                    if (currentForegroundHWnd == _targetHWnd)
                     {
-                        SendKey(_targetHWnd, _repeatVk);
-                        newIsRepeating = true;
+                        var vkState = GetAsyncKeyState(_repeatVk);
+                        if ((vkState & 0x8000) != 0)
+                        {
+                            currentIsRepeating = true;
+                        }
                     }
                 }
-            }
 
-            if (newIsRepeating != IsRepeating)
-            {
-                IsRepeating = newIsRepeating;
-                IsRepeatingChanged?.Invoke(this, new IsRepeatingChangedEventArgs(newIsRepeating));
+                //if (currentIsRepeating && !IsRepeating)
+                //{
+                //    // 发送弹起事件，与用户的按下事件组成一次按键事件
+                //    Thread.Sleep(10);
+                //    SendKeyUp(_targetHWnd, _repeatVk);
+                //    Thread.Sleep(delay);
+                //}
+
+                if (currentIsRepeating)
+                {
+                    // 发送一次按键事件
+                    SendKeyDown(_targetHWnd, 89); // 89 is 'Y'
+                    Thread.Sleep(10);
+                    SendKeyUp(_targetHWnd, 89);
+                }
+
+                // 更新连发状态
+                if (currentIsRepeating != IsRepeating)
+                {
+                    IsRepeating = currentIsRepeating;
+                    IsRepeatingChanged?.Invoke(this, new IsRepeatingChangedEventArgs(currentIsRepeating));
+                }
+
+                if (_isDisposed) break;
+                Thread.Sleep(delay);
+                if (_isDisposed) break;
             }
         }
         #endregion
@@ -420,25 +441,42 @@ namespace DnfRepeater.Modules
             return string.Empty;
         }
 
-        private void SendKey(IntPtr hWnd, int vk)
+        private void SendKeyDown(IntPtr hWnd, int vk)
         {
             ushort scanCode = (ushort)MapVirtualKey((uint)vk, MAPVK_VK_TO_VSC);
+            INPUT input = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                u = new InputUnion
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = (ushort)vk,
+                        wScan = scanCode,
+                        dwFlags = KEYEVENTF_SCANCODE
+                    }
+                }
+            };
+            SendInput(1, new INPUT[] { input }, Marshal.SizeOf(typeof(INPUT)));
+        }
 
-            INPUT[] inputs = new INPUT[2];
-
-            inputs[0].type = INPUT_KEYBOARD;
-            inputs[0].u.ki.wVk = (ushort)vk;
-            inputs[0].u.ki.wScan = scanCode;
-            inputs[0].u.ki.dwFlags = KEYEVENTF_SCANCODE; // Key down
-
-            inputs[1].type = INPUT_KEYBOARD;
-            inputs[1].u.ki.wVk = (ushort)vk;
-            inputs[1].u.ki.wScan = scanCode;
-            inputs[1].u.ki.dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP; // Key up
-
-            SendInput(1, new INPUT[] { inputs[0] }, Marshal.SizeOf(typeof(INPUT)));
-            Thread.Sleep(10); // 间隔10毫秒
-            SendInput(1, new INPUT[] { inputs[1] }, Marshal.SizeOf(typeof(INPUT)));
+        private void SendKeyUp(IntPtr hWnd, int vk)
+        {
+            ushort scanCode = (ushort)MapVirtualKey((uint)vk, MAPVK_VK_TO_VSC);
+            INPUT input = new INPUT
+            {
+                type = INPUT_KEYBOARD,
+                u = new InputUnion
+                {
+                    ki = new KEYBDINPUT
+                    {
+                        wVk = (ushort)vk,
+                        wScan = scanCode,
+                        dwFlags = KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP
+                    }
+                }
+            };
+            SendInput(1, new INPUT[] { input }, Marshal.SizeOf(typeof(INPUT)));
         }
 
         private bool IsWindowClosed(IntPtr hWnd)
