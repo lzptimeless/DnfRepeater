@@ -52,6 +52,6 @@
             </StackPanel>
         </Grid>
         <TextBlock Grid.Row="3" TextWrapping="Wrap" Margin="10,0,10,0" Foreground="#222222" VerticalAlignment="Top"
-                   Text="使用说明：先选中DNF游戏窗口，然后按下“开关快捷键”，此时连发器会将这个窗口设置为目标窗口，之后在这个窗口内按住“连发键”不放时就会连发，弹起“连发键”后就会暂停连发。"/>
+                   Text="使用说明：先选中DNF游戏窗口，然后按下“开关快捷键”，此时连发器会将这个窗口设置为目标窗口，之后在这个窗口内按住“触发键”不放时就会连发，弹起“触发键”后就会暂停连发。"/>
     </Grid>
 </Window>
