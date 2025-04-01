@@ -16,11 +16,12 @@ namespace DnfRepeater.Modules
 
         public string? OnOffHotkey { get; set; }
         public string? RepeatKey { get; set; }
+        public string? TriggerKey { get; set; }
         public int RepeatFrequency { get; set; }
 
         public static UserConfig CreateDefaultConfig()
         {
-            return new UserConfig { OnOffHotkey = "Ctrl+`", RepeatKey = "J", RepeatFrequency = 10 };
+            return new UserConfig { OnOffHotkey = "Ctrl+`", RepeatKey = "W", TriggerKey = "J", RepeatFrequency = 10 };
         }
 
         public void UseDefaultValueIfNeed()
@@ -34,6 +35,11 @@ namespace DnfRepeater.Modules
             if (string.IsNullOrWhiteSpace(RepeatKey))
             {
                 RepeatKey = defaultConfig.RepeatKey;
+            }
+
+            if (string.IsNullOrWhiteSpace(TriggerKey))
+            {
+                TriggerKey = defaultConfig.TriggerKey;
             }
 
             if (RepeatFrequency < RepeatFrequencyMin || RepeatFrequency > RepeatFrequencyMax)

@@ -16,6 +16,7 @@ namespace DnfRepeater.Modules
         private readonly UserConfig _userConfig;
         private IntPtr _targetHWnd;
         private int _repeatVk;
+        private int _triggerVk;
         private int _registeredOnOffHotkeyId;
         /// <summary>
         /// 用以监控前台窗口变化
@@ -46,6 +47,10 @@ namespace DnfRepeater.Modules
         /// 连发键
         /// </summary>
         public string? RepeatKey { get; private set; }
+        /// <summary>
+        /// 触发键
+        /// </summary>
+        public string? TriggerKey { get; private set; }
         /// <summary>
         /// 连发频率（次/秒），取值范围：<see cref="UserConfig.RepeatFrequencyMin"/>-<see cref="UserConfig.RepeatFrequencyMax"/>
         /// </summary>
@@ -86,6 +91,7 @@ namespace DnfRepeater.Modules
             {
                 SetOnOffHotkey(_userConfig.OnOffHotkey);
                 SetRepeatKey(_userConfig.RepeatKey);
+                SetTriggerKey(_userConfig.TriggerKey);
                 SetRepeatFrequency(_userConfig.RepeatFrequency);
             }
             catch(Exception ex)
@@ -97,6 +103,7 @@ namespace DnfRepeater.Modules
                 // 就算配置文件中的配置有误，也要将设置赋值到属性中，以便在界面上显示
                 OnOffHotkey = _userConfig.OnOffHotkey;
                 RepeatKey = _userConfig.RepeatKey;
+                TriggerKey = _userConfig.TriggerKey;
                 RepeatFrequency = _userConfig.RepeatFrequency;
             }
         }
@@ -179,6 +186,27 @@ namespace DnfRepeater.Modules
             RepeatKey = key;
             _repeatVk = vk;
             _userConfig.RepeatKey = RepeatKey;
+            _userConfig.Save();
+        }
+
+        public void SetTriggerKey(string? key)
+        {
+            Log.Information("Setting trigger key to {key}...", key);
+            int vk;
+            if (string.IsNullOrEmpty(key))
+            {
+                vk = 0;
+            }
+            else
+            {
+                if (!HotkeyConverter.TryKeyNameToVirtualKey(key, out vk))
+                {
+                    throw new ArgumentException($"The key '{key}' is not a valid key name.");
+                }
+            }
+            TriggerKey = key;
+            _triggerVk = vk;
+            _userConfig.TriggerKey = TriggerKey;
             _userConfig.Save();
         }
 
@@ -303,12 +331,12 @@ namespace DnfRepeater.Modules
                 var delay = 1000 / frequency;
                 // 检测当前是否需要连发
                 var currentIsRepeating = false;
-                if (_targetHWnd != IntPtr.Zero && _repeatVk != 0)
+                if (_targetHWnd != IntPtr.Zero && _repeatVk != 0 && _triggerVk != 0)
                 {
                     var currentForegroundHWnd = GetForegroundWindow();
                     if (currentForegroundHWnd == _targetHWnd)
                     {
-                        var vkState = GetAsyncKeyState(_repeatVk);
+                        var vkState = GetAsyncKeyState(_triggerVk);
                         if ((vkState & 0x8000) != 0)
                         {
                             currentIsRepeating = true;
@@ -316,20 +344,12 @@ namespace DnfRepeater.Modules
                     }
                 }
 
-                //if (currentIsRepeating && !IsRepeating)
-                //{
-                //    // 发送弹起事件，与用户的按下事件组成一次按键事件
-                //    Thread.Sleep(10);
-                //    SendKeyUp(_targetHWnd, _repeatVk);
-                //    Thread.Sleep(delay);
-                //}
-
                 if (currentIsRepeating)
                 {
                     // 发送一次按键事件
-                    SendKeyDown(_targetHWnd, 89); // 89 is 'Y'
+                    SendKeyDown(_targetHWnd, _repeatVk);
                     Thread.Sleep(10);
-                    SendKeyUp(_targetHWnd, 89);
+                    SendKeyUp(_targetHWnd, _repeatVk);
                 }
 
                 // 更新连发状态

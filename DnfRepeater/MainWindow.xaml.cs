@@ -132,6 +132,7 @@ namespace DnfRepeater
         {
             _coreModule.SetOnOffHotkey(OnOffHotkeyTextBox.Text);
             _coreModule.SetRepeatKey(RepeatKeyTextBox.Text);
+            _coreModule.SetTriggerKey(TriggerKeyTextBox.Text);
             if (int.TryParse(RepeatFrequencyTextBox.Text, out int frequency))
             {
                 _coreModule.SetRepeatFrequency(frequency);
@@ -146,6 +147,7 @@ namespace DnfRepeater
         {
             OnOffHotkeyTextBox.Text = _coreModule.OnOffHotkey;
             RepeatKeyTextBox.Text = _coreModule.RepeatKey;
+            TriggerKeyTextBox.Text = _coreModule.TriggerKey;
             RepeatFrequencyTextBox.Text = _coreModule.RepeatFrequency.ToString();
         }
 
@@ -153,6 +155,7 @@ namespace DnfRepeater
         {
             OnOffHotkeyTextBox.IsEnabled = isEnable;
             RepeatKeyTextBox.IsEnabled = isEnable;
+            TriggerKeyTextBox.IsEnabled = isEnable;
             RepeatFrequencyTextBox.IsEnabled = isEnable;
         }
     }
