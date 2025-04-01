@@ -13,6 +13,8 @@ namespace DnfRepeater.Modules
     internal class CoreModule : IDisposable
     {
         #region fields
+        private const int PressDurationMilliseconds = 10;
+
         private readonly UserConfig _userConfig;
         private IntPtr _targetHWnd;
         private int _repeatVk;
@@ -328,7 +330,7 @@ namespace DnfRepeater.Modules
                 _repeatEvent.WaitOne();
                 // 计算连发延迟
                 var frequency = Math.Max(UserConfig.RepeatFrequencyMin, Math.Min(UserConfig.RepeatFrequencyMax, RepeatFrequency));
-                var delay = 1000 / frequency;
+                var delay = (1000 - PressDurationMilliseconds * frequency) / frequency;
                 // 检测当前是否需要连发
                 var currentIsRepeating = false;
                 if (_targetHWnd != IntPtr.Zero && _repeatVk != 0 && _triggerVk != 0)
@@ -348,7 +350,7 @@ namespace DnfRepeater.Modules
                 {
                     // 发送一次按键事件
                     SendKeyDown(_targetHWnd, _repeatVk);
-                    Thread.Sleep(10);
+                    Thread.Sleep(PressDurationMilliseconds);
                     SendKeyUp(_targetHWnd, _repeatVk);
                 }
 
